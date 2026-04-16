@@ -1,0 +1,5 @@
+{
+  "name": "SupplyChain Sentinel",
+  "description": "Register hardware manufacturers, track supply chain locations, and assess technological risks for end users.",
+  "requestFramePermissions": []
+}

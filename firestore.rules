@@ -1,0 +1,156 @@
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// Collection: manufacturers
+// Document ID: auto-generated
+// Fields:
+//   - name: string (required, 1-100 chars)
+//   - headquarters: string (required, 1-100 chars)
+//   - techType: string (required, 1-50 chars)
+//   - description: string (optional, 0-500 chars)
+//   - threatActors: list (optional, strings)
+//   - createdAt: number (required)
+//   - authorUid: string (required)
+//
+// Collection: locations
+// Document ID: auto-generated
+// Fields:
+//   - manufacturerId: string (required)
+//   - type: string (required, enum: Assembly, Component Sourcing, Raw Materials, R&D, Distribution)
+//   - country: string (required, 1-100 chars)
+//   - details: string (optional, 0-200 chars)
+//   - authorUid: string (required)
+//
+// Collection: reports
+// Document ID: auto-generated
+// Fields:
+//   - manufacturerId: string (required)
+//   - riskScore: number (required, 0-100)
+//   - summary: string (required, 1-2000 chars)
+//   - keyRisks: list (required, strings)
+//   - mitigationStrategies: list (required, strings)
+//   - threatActorLinks: list (optional, strings)
+//   - assessedAt: number (required)
+//   - authorUid: string (required)
+//
+// ===============================================================
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        ((exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin') ||
+          (request.auth.token.email == "beaudoin@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function isValidString(field, min, max) {
+      return request.resource.data[field] is string &&
+             request.resource.data[field].size() >= min &&
+             request.resource.data[field].size() <= max;
+    }
+
+    function isValidOptionalString(field, max) {
+      return !(field in request.resource.data) ||
+             (request.resource.data[field] is string && request.resource.data[field].size() <= max);
+    }
+
+    function isValidList(field, maxItems, maxItemSize) {
+      return request.resource.data[field] is list &&
+             request.resource.data[field].size() <= maxItems;
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidManufacturer(data) {
+      return hasRequiredFields(['name', 'headquarters', 'techType', 'createdAt', 'authorUid']) &&
+             hasOnlyAllowedFields(['name', 'headquarters', 'techType', 'description', 'threatActors', 'createdAt', 'authorUid']) &&
+             isValidString('name', 1, 100) &&
+             isValidString('headquarters', 0, 100) &&
+             isValidString('techType', 0, 50) &&
+             isValidOptionalString('description', 500) &&
+             (!('threatActors' in data) || isValidList('threatActors', 20, 100)) &&
+             data.createdAt is number &&
+             data.authorUid == request.auth.uid;
+    }
+
+    function isValidLocation(data) {
+      return hasRequiredFields(['manufacturerId', 'type', 'country', 'authorUid']) &&
+             hasOnlyAllowedFields(['manufacturerId', 'type', 'country', 'details', 'authorUid']) &&
+             isValidString('manufacturerId', 1, 100) &&
+             data.type in ['Assembly', 'Component Sourcing', 'Raw Materials', 'R&D', 'Distribution'] &&
+             isValidString('country', 1, 100) &&
+             isValidOptionalString('details', 200) &&
+             data.authorUid == request.auth.uid;
+    }
+
+    function isValidReport(data) {
+      return hasRequiredFields(['manufacturerId', 'riskScore', 'summary', 'keyRisks', 'mitigationStrategies', 'assessedAt', 'authorUid']) &&
+             hasOnlyAllowedFields(['manufacturerId', 'riskScore', 'summary', 'keyRisks', 'mitigationStrategies', 'threatActorLinks', 'assessedAt', 'authorUid', 'confidenceScore']) &&
+             isValidString('manufacturerId', 1, 100) &&
+             data.riskScore is number && data.riskScore >= 0 && data.riskScore <= 100 &&
+             isValidString('summary', 1, 2000) &&
+             isValidList('keyRisks', 20, 200) &&
+             isValidList('mitigationStrategies', 20, 200) &&
+             (!('threatActorLinks' in data) || isValidList('threatActorLinks', 20, 200)) &&
+             (!('confidenceScore' in data) || data.confidenceScore is number) &&
+             data.assessedAt is number &&
+             data.authorUid == request.auth.uid;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /manufacturers/{mId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidManufacturer(request.resource.data);
+      allow update: if isAuthenticated() && isValidManufacturer(request.resource.data) && (isOwner(resource.data.authorUid) || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    match /locations/{lId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidLocation(request.resource.data);
+      allow update: if isAuthenticated() && isValidLocation(request.resource.data) && (isOwner(resource.data.authorUid) || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    match /reports/{rId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidReport(request.resource.data);
+      allow update: if isAuthenticated() && isValidReport(request.resource.data) && (isOwner(resource.data.authorUid) || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && request.resource.data.role == 'user';
+      allow update: if isAdmin() || (isOwner(userId) && request.resource.data.role == resource.data.role);
+    }
+  }
+}

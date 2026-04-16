@@ -1,0 +1,59 @@
+{
+  "entities": {
+    "Manufacturer": {
+      "title": "Manufacturer",
+      "description": "A hardware device manufacturer.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Company name" },
+        "headquarters": { "type": "string", "description": "City and country of HQ" },
+        "techType": { "type": "string", "description": "Primary technology category" },
+        "description": { "type": "string", "description": "Brief overview" },
+        "threatActors": { "type": "array", "items": { "type": "string" }, "description": "Known threat actor links" },
+        "createdAt": { "type": "number", "description": "Timestamp of registration" }
+      },
+      "required": ["name", "headquarters", "techType", "createdAt"]
+    },
+    "SupplyChainLocation": {
+      "title": "Supply Chain Location",
+      "description": "A node in the supply chain.",
+      "type": "object",
+      "properties": {
+        "manufacturerId": { "type": "string", "description": "ID of the manufacturer" },
+        "type": { "type": "string", "enum": ["Assembly", "Component Sourcing", "Raw Materials", "R&D", "Distribution"] },
+        "country": { "type": "string", "description": "Country of operation" },
+        "details": { "type": "string", "description": "Specific location details" }
+      },
+      "required": ["manufacturerId", "type", "country"]
+    },
+    "RiskReport": {
+      "title": "Risk Report",
+      "description": "AI-generated risk assessment.",
+      "type": "object",
+      "properties": {
+        "manufacturerId": { "type": "string", "description": "ID of the manufacturer" },
+        "riskScore": { "type": "number", "description": "Score from 0-100" },
+        "summary": { "type": "string", "description": "Executive summary" },
+        "keyRisks": { "type": "array", "items": { "type": "string" } },
+        "mitigationStrategies": { "type": "array", "items": { "type": "string" } },
+        "threatActorLinks": { "type": "array", "items": { "type": "string" } },
+        "assessedAt": { "type": "number", "description": "Timestamp of assessment" }
+      },
+      "required": ["manufacturerId", "riskScore", "summary", "keyRisks", "mitigationStrategies", "assessedAt"]
+    }
+  },
+  "firestore": {
+    "/manufacturers/{manufacturerId}": {
+      "schema": "Manufacturer",
+      "description": "Collection of hardware manufacturers"
+    },
+    "/locations/{locationId}": {
+      "schema": "SupplyChainLocation",
+      "description": "Collection of supply chain nodes"
+    },
+    "/reports/{reportId}": {
+      "schema": "RiskReport",
+      "description": "Collection of risk assessment reports"
+    }
+  }
+}
