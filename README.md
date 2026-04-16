@@ -1,5 +1,5 @@
 <div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/daswickerman/v01/supplychainsentinel.png" />
+<img width="1200" height="475" alt="GHBanner" src="https://raw.githubusercontent.com/daswickerman/v01/refs/heads/main/supplychainsentinel.png" />
 </div>
 
 Supply Chain Sentinel is a prototype which takes an input of manufacturer locations and performs a risk analysis based on various factors to determine realitve risk and assign a score. Factors include regulatory strength, government influence/capture of private industry, and other factors associated with physical locations. 
